@@ -377,7 +377,6 @@ def rank_show():
         returnDatas.append(returnData)
     return [returnDatas]
 def TransportKPI_to_DB(input_file):
-    print(input_file)
     input_file_dic, input_file_sheets, file_column_dic = {}, [], {}
     input_file_dic, input_file_sheets, file_column_dic = get_info_from_excel(input_file_dic, input_file_sheets, file_column_dic, input_file)
     trans_kpi = TransportKPI()
@@ -421,7 +420,7 @@ def TransportKPI_to_DB(input_file):
 def show_month_transport():
     [month_mark, week_mark] = get_target_month_week()
     trans_kpi = TransportKPI()
-    project_names = ['NIKE', 'VF', '阿克苏', '喜利得', '美邦', '京东', '好孩子', '宝胜']
+    terms = ['交货准时率', '交货完好率', '回单返回率', '客诉次数', '安全事故次数', '回款率', '营业额完成率', '利润完成率', '表扬']
     returnDatas = {
         '交货准时率': {'timeString': month_mark, 'data': []},
         '交货完好率': {'timeString': month_mark, 'data': []},
@@ -432,53 +431,60 @@ def show_month_transport():
         '营业额完成率': {'timeString': month_mark, 'data': []},
         '利润完成率': {'timeString': month_mark, 'data': []},
         '表扬': {'timeString': month_mark, 'data': []},
-        '异常分析': month_mark + '异常分析: '
+        '异常分析': month_mark + '异常分析: 本月无异常。'
     }
-    month = month_mark
+    tasks = trans_kpi.query.filter_by(month=month_mark).all()
+    month_datas, project_names = [], []
+    for ele in tasks:
+        month_datas.append([getattr(ele, c.key) for c in class_mapper(ele.__class__).columns])
+    for row in month_datas:
+        if row[1] not in project_names:
+            project_names.append(row[1])
     for project in project_names:
         tasks = trans_kpi.query.filter_by(project=project).all()
         cur, ytd, cur1, ytd1, cur2, ytd2, cur3, ytd3 = 0, 0, 0, 0, 0, 0, 0, 0
         cur4, ytd4, cur5, ytd5, cur6, ytd6, cur7, ytd7 = 0, 0, 0, 0, 0, 0, 0, 0
+        cur8, ytd8 = 0, 0
         for task in tasks:
             if task.punctuality:
-                if task.month == month:
-                    cur = int(task.punctuality)
-                ytd += int(task.punctuality)         
+                if task.month == month_mark:
+                    cur = int(float(task.punctuality))
+                ytd += int(float(task.punctuality))
             if task.availability:
-                if task.month == month:
-                    cur1 = int(task.availability)
-                ytd1 += int(task.availability)
+                if task.month == month_mark:
+                    cur1 = int(float(task.availability))
+                ytd1 += int(float(task.availability))
             if task.return_rate:
-                if task.month == month:
-                    cur2 = int(task.return_rate)
-                ytd2 += int(task.return_rate)
+                if task.month == month_mark:
+                    cur2 = int(float(task.return_rate))
+                ytd2 += int(float(task.return_rate))
             if task.complaint:
-                if task.month == month:
-                    cur3 = int(task.complaint)
-                ytd3 += int(task.complaint)
+                if task.month == month_mark:
+                    cur3 = int(float(task.complaint))
+                ytd3 += int(float(task.complaint))
             if task.accident:
-                if task.month == month:
-                    cur4 = int(task.accident)
-                ytd4 += int(task.accident)
+                if task.month == month_mark:
+                    cur4 = int(float(task.accident))
+                ytd4 += int(float(task.accident))
             if task.collection_rate:
-                if task.month == month:
-                    cur5 = int(task.collection_rate)
-                ytd5 += int(task.collection_rate)
+                if task.month == month_mark:
+                    cur5 = int(float(task.collection_rate))
+                ytd5 += int(float(task.collection_rate))
             if task.completion_rate:
-                if task.month == month:
-                    cur6 = int(task.completion_rate)
-                ytd6 += int(task.completion_rate)
+                if task.month == month_mark:
+                    cur6 = int(float(task.completion_rate))
+                ytd6 += int(float(task.completion_rate))
             if task.profit_rate:
-                if task.month == month:
-                    cur7 = int(task.profit_rate)
-                ytd7 += int(task.profit_rate)
+                if task.month == month_mark:
+                    cur7 = int(float(task.profit_rate))
+                ytd7 += int(float(task.profit_rate))
         returnDatas['交货准时率']['data'].append({'project': project, 'cur': cur, 'ytd': ytd})
-        returnDatas['交货完好率']['data'].append({'project': project, 'cur': cur, 'ytd': ytd})
-        returnDatas['回单返回率']['data'].append({'project': project, 'cur': cur, 'ytd': ytd})
-        returnDatas['客诉次数']['data'].append({'project': project, 'cur': cur, 'ytd': ytd})
-        returnDatas['安全事故次数']['data'].append({'project': project, 'cur': cur, 'ytd': ytd})
-        returnDatas['回款率']['data'].append({'project': project, 'cur': cur, 'ytd': ytd})
-        returnDatas['营业额完成率']['data'].append({'project': project, 'cur': cur, 'ytd': ytd})
-        returnDatas['利润完成率']['data'].append({'project': project, 'cur': cur, 'ytd': ytd})
-        returnDatas['表扬']['data'].append({'project': project, 'cur': 0, 'ytd': 0})
+        returnDatas['交货完好率']['data'].append({'project': project, 'cur': cur1, 'ytd': ytd1})
+        returnDatas['回单返回率']['data'].append({'project': project, 'cur': cur2, 'ytd': ytd2})
+        returnDatas['客诉次数']['data'].append({'project': project, 'cur': cur3, 'ytd': ytd3})
+        returnDatas['安全事故次数']['data'].append({'project': project, 'cur': cur4, 'ytd': ytd4})
+        returnDatas['回款率']['data'].append({'project': project, 'cur': cur5, 'ytd': ytd5})
+        returnDatas['营业额完成率']['data'].append({'project': project, 'cur': cur6, 'ytd': ytd6})
+        returnDatas['利润完成率']['data'].append({'project': project, 'cur': cur7, 'ytd': ytd7})
+        returnDatas['表扬']['data'].append({'project': project, 'cur': cur8, 'ytd': ytd8})
     return returnDatas
