@@ -157,58 +157,51 @@ def CenterKPI_to_DB(input_file):
             db.session.commit()
     index = 0
     input_dic, input_data = {}, []
+    dc_list = []
     for i in range(len(datas)):
-        if datas[i][0] == "事故：件":
-            valid_data = []
-            valid_data.append(['center', '当月', '上海', datas[i][1], datas[i+1][1], datas[i+3][1], datas[i+4][1]])
-            valid_data.append(['center', 'YTD', '上海', datas[i][5], datas[i+1][5], datas[i+3][5], datas[i+4][5]])
-            valid_data.append(['center', '当月', '武汉', datas[i][2], datas[i+1][2], datas[i+3][2], datas[i+4][2]])
-            valid_data.append(['center', 'YTD', '武汉', datas[i][6], datas[i+1][6], datas[i+3][6], datas[i+4][6]])
-            valid_data.append(['center', '当月', '成都', datas[i][3], datas[i+1][3], datas[i+3][3], datas[i+4][3]])
-            valid_data.append(['center', 'YTD', '成都', datas[i][7], datas[i+1][7], datas[i+3][7], datas[i+4][7]])
-            valid_data.append(['center', '当月', '西安', datas[i][4], datas[i+1][4], datas[i+3][4], datas[i+4][4]])
-            valid_data.append(['center', 'YTD', '西安', datas[i][8], datas[i+1][8], datas[i+3][8], datas[i+4][8]])
-            db.session.execute(csc_kpi.__table__.insert(),
-                [{
-                    "month": data[1], "city": data[2], "accident": data[3], "complain": data[4],
-                    "business_area": data[5], "usable_area": data[6]
-                } for data in valid_data]
-            )
-            db.session.commit()
-        if (i <= 9) or ('库存净差异：周' in datas[i]):
-            index = i
+        if "大仓" in datas[i]:
+            for ele in datas[i]:
+                if (ele == '') or (not ele) or (ele == "大仓"):
+                    continue
+                if ele in dc_list:
+                    continue
+                dc_list.append(ele)
+    dc_num = len(dc_list)
+    print(dc_list)
+    data_part1 = []
+    for i in range(len(datas)):
+        if (i <= 1):
             continue
+        if "事故：件" in datas[i]:
+            for j, dc in enumerate(dc_list):
+                data_part1.append(['center', '当月', dc, datas[i][j+1], datas[i+1][j+1], datas[i+3][j+1], datas[i+4][j+1]])
+                data_part1.append(['center', 'YTD', dc, datas[i][dc_num+1], datas[i+1][dc_num+1], datas[i+3][dc_num+1], datas[i+4][dc_num+1]])  
         if ('WK' in datas[i][0]) or ('月' in datas[i][0]) or ('YTD' in datas[i][0]):
             if datas[i][0] not in input_dic.keys():
                 input_dic[datas[i][0]] = []
-                input_dic[datas[i][0]].append(['center', datas[i][0], '上海', datas[i][1], datas[i][5], datas[i][9], datas[i][13], "", "", "", ""])
-                input_dic[datas[i][0]].append(['center', datas[i][0], '武汉', datas[i][2], datas[i][6], datas[i][10], datas[i][14], "", "", "", ""])
-                input_dic[datas[i][0]].append(['center', datas[i][0], '成都', datas[i][3], datas[i][7], datas[i][11], datas[i][15], "", "", "", ""])
-                input_dic[datas[i][0]].append(['center', datas[i][0], '西安', datas[i][4], datas[i][8], datas[i][12], datas[i][16], "", "", "", ""])
+                for j, dc in enumerate(dc_list):
+                    input_dic[datas[i][0]].append(['center', datas[i][0], dc, datas[i][j+1], datas[i][j+1+dc_num],
+                                                    datas[i][j+1+2*dc_num], datas[i][j+1+3*dc_num], "", "", "", ""])
+        if '库存毛差异：周' in datas[i]:
+            index = i
+            break
+    db.session.execute(csc_kpi.__table__.insert(),
+        [{
+            "month": data[1], "city": data[2], "accident": data[3], "complain": data[4],
+            "business_area": data[5], "usable_area": data[6]
+        } for data in data_part1]
+    )
+    db.session.commit()
     for i in range(index, len(datas)):
         if ('WK' in datas[i][0]) or ('月' in datas[i][0]) or ('YTD' in datas[i][0]):
             if datas[i][0] in input_dic.keys():
                 for data in input_dic[datas[i][0]]:
-                    if data[2] == '上海':
-                        data[7] = datas[i][1]
-                        data[8] = datas[i][5]
-                        data[9] = datas[i][9]
-                        data[10] = datas[i][13]
-                    elif data[2] == '武汉':
-                        data[7] = datas[i][2]
-                        data[8] = datas[i][6]
-                        data[9] = datas[i][10]
-                        data[10] = datas[i][14]
-                    elif data[2] == '成都':
-                        data[7] = datas[i][3]
-                        data[8] = datas[i][7]
-                        data[9] = datas[i][11]
-                        data[10] = datas[i][15]
-                    elif data[2] == '西安':
-                        data[7] = datas[i][4]
-                        data[8] = datas[i][8]
-                        data[9] = datas[i][12]
-                        data[10] = datas[i][16]
+                    for j, dc in enumerate(dc_list):
+                        if data[2] == dc:
+                            data[7] = datas[i][j+1]
+                            data[8] = datas[i][j+1+dc_num]
+                            data[9] = datas[i][j+1+2*dc_num]
+                            data[10] = datas[i][j+1+3*dc_num]
     for key in input_dic.keys():
         for data in input_dic[key]:
             input_data.append(data)
@@ -227,7 +220,7 @@ def isfloat(str):
         return True
     except ValueError:
         return False
-
+from sqlalchemy.orm import class_mapper
 def kpi_show():
     csc_kpi = CSCKPI()
     center_kpi = CenterKPI()
@@ -237,418 +230,109 @@ def kpi_show():
     result = {}
     if (not same_task) or (not ytd_task):
         return result
-    for i in range(4):
+    # 转换为数组
+    same_datas, ytd_datas = [], []
+    for same in same_task:
+        same_datas.append([getattr(same, c.key) for c in class_mapper(same.__class__).columns])
+    for ytd in ytd_task:
+        ytd_datas.append([getattr(ytd, c.key) for c in class_mapper(ytd.__class__).columns])
+    project1 = ['事故', '客户投诉', '可拓展新业务面积', '搭平台后可用面积']
+    for i, ele in enumerate(project1):
         returnDatas = {
-            'timeString': '',
+            'timeString': month_mark,
             'data': []
         }
-        returnData = {
-            'noid': '',
-            'name': '上海',
-            'ytd': 0,
-            'num': 0,
-            'target': 0
-        }
-        returnData1 = {
-            'noid': '',
-            'name': '武汉',
-            'ytd': 0,
-            'num': 0,
-            'target': 0
-        }
-        returnData2 = {
-            'noid': '',
-            'name': '成都',
-            'ytd': 0,
-            'num': 0,
-            'target': 0
-        }
-        returnData3 = {
-            'noid': '',
-            'name': '西安',
-            'ytd': 0,
-            'num': 0,
-            'target': 0
-        }
-        if i == 0:
-            same_acc, ytd_acc = 0, 0
-            for same in same_task:
-                if isfloat(same.accident):
-                    same_acc = int(float(same.accident))
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.accident):
-                    ytd_acc = int(float(ytd.accident))
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnDatas['timeString'] = month_mark
+        for row in same_datas:
+            returnData = {
+                'noid': '',
+                'name': '',
+                'ytd': 0,
+                'num': 0,
+                'target': 0
+            }
+            returnData['name'] = row[2]
+            if isfloat(row[i + 3]):
+                returnData['num'] = int(float(row[i + 3]))
             returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['事故'] = returnDatas
-        elif i == 1:
-            same_acc, ytd_acc = 0, 0
-            for same in same_task:
-                if isfloat(same.complain):
-                    same_acc = int(float(same.complain))
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.complain):
-                    ytd_acc = int(float(ytd.complain))
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnDatas['timeString'] = month_mark
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['客户投诉'] = returnDatas
-        elif i == 2:
-            same_acc, ytd_acc = 0, 0
-            for same in same_task:
-                if isfloat(same.business_area):
-                    same_acc = int(float(same.business_area))
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.business_area):
-                    ytd_acc = int(float(ytd.business_area))
-                if ytd.business_area == "/":
-                    ytd_acc = "/"
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnDatas['timeString'] = month_mark
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['可拓展新业务面积'] = returnDatas
-        elif i == 3:
-            same_acc, ytd_acc = 0, 0
-            for same in same_task:
-                if isfloat(same.usable_area):
-                    same_acc = int(float(same.usable_area))
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.usable_area):
-                    ytd_acc = int(float(ytd.usable_area))
-                if ytd.usable_area == "/":
-                    ytd_acc = "/"
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnDatas['timeString'] = month_mark
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['搭平台后可用面积'] = returnDatas
+        for row in ytd_datas:
+            for rd in returnDatas['data']:
+                if rd['name'] != row[2]:
+                    continue
+                if isfloat(row[i + 3]):
+                    rd['ytd'] = int(float(row[i + 3]))
+        result[project1[i]] = returnDatas
     month_task = center_kpi.query.filter_by(week = month_mark).all()
     week_task = center_kpi.query.filter_by(week = week_mark).all()
     ytd_task = center_kpi.query.filter_by(week = "YTD").all()
     if (not month_task) or (not week_task) or (not ytd_task):
         return result
-    for i in range(7):
+    month_datas, week_datas, ytd1_datas = [], [], []
+    for ele in month_task:
+        month_datas.append([getattr(ele, c.key) for c in class_mapper(ele.__class__).columns])
+    for ele in week_task:
+        week_datas.append([getattr(ele, c.key) for c in class_mapper(ele.__class__).columns])
+    for ele in ytd_task:
+        ytd1_datas.append([getattr(ele, c.key) for c in class_mapper(ele.__class__).columns])
+    project2 = ['单件成本', '人员流失率', 'B2C人均效率', 'B2B人均效率', '库存净差异', '业绩达成率', '利润率']
+    for i, ele in enumerate(project2):
         returnDatas = {
             'timeString': '',
             'data': []
         }
-        returnData = {
-            'noid': '',
-            'name': '上海',
-            'ytd': 0,
-            'num': 0,
-            'target': 0
-        }
-        returnData1 = {
-            'noid': '',
-            'name': '武汉',
-            'ytd': 0,
-            'num': 0,
-            'target': 0
-        }
-        returnData2 = {
-            'noid': '',
-            'name': '成都',
-            'ytd': 0,
-            'num': 0,
-            'target': 0
-        }
-        returnData3 = {
-            'noid': '',
-            'name': '西安',
-            'ytd': 0,
-            'num': 0,
-            'target': 0
-        }
-        if i == 0:
-            same_acc, ytd_acc = 0, 0
-            for same in month_task:
-                if isfloat(same.price):
-                    same_acc = round(float(same.price), 3)
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.price):
-                    ytd_acc = round(float(ytd.price), 3)
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnData['target'] = returnData1['target'] = returnData2['target'] = returnData3['target'] = 15
-            returnDatas['timeString'] = month_mark
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['单件成本'] = returnDatas
-        elif i == 1:
-            same_acc, ytd_acc = 0, 0
-            for same in month_task:
-                if isfloat(same.turnover):
-                    same_acc = round(float(same.turnover) * 100, 3)
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.turnover):
-                    ytd_acc = round(float(ytd.turnover) * 100, 3)
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnData['target'] = returnData1['target'] = returnData2['target'] = returnData3['target'] = 10
-            returnDatas['timeString'] = month_mark
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['人员流失率'] = returnDatas
-        elif i == 2:
-            same_acc, ytd_acc = 0, 0
-            for same in week_task:
-                if isfloat(same.B2C_efficiency):
-                    same_acc = round(float(same.B2C_efficiency), 3)
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.B2C_efficiency):
-                    ytd_acc = round(float(ytd.B2C_efficiency), 3)
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnData['target'] = returnData1['target'] = returnData2['target'] = returnData3['target'] = 10
+        if i in [2, 3, 4]:
             returnDatas['timeString'] = week_mark
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['B2C人均效率'] = returnDatas
-        elif i == 3:
-            same_acc, ytd_acc = 0, 0
-            for same in week_task:
-                if isfloat(same.B2B_efficiency):
-                    same_acc = round(float(same.B2B_efficiency), 3)
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.B2B_efficiency):
-                    ytd_acc = round(float(ytd.B2B_efficiency), 3)
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnData['target'] = returnData1['target'] = returnData2['target'] = returnData3['target'] = 60
-            returnDatas['timeString'] = week_mark
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['B2B人均效率'] = returnDatas
-        elif i == 4:
-            same_acc, ytd_acc = 0, 0
-            for same in week_task:
-                if isfloat(same.stock):
-                    same_acc = round(float(same.stock) * 100, 3)
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.stock):
-                    ytd_acc = round(float(ytd.stock) * 100, 3)
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnDatas['timeString'] = week_mark
-            returnData['target'] = returnData1['target'] = returnData2['target'] = returnData3['target'] = 10
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['库存净差异'] = returnDatas
-        elif i == 5:
-            same_acc, ytd_acc = 0, 0
-            for same in month_task:
-                if isfloat(same.performance):
-                    same_acc = round(float(same.performance) * 100, 3)
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.performance):
-                    ytd_acc = round(float(ytd.performance) * 100, 3)
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
+            for row in week_datas:
+                returnData = {
+                    'noid': '',
+                    'name': '',
+                    'ytd': 0,
+                    'num': 0,
+                    'target': 0
+                }
+                returnData['name'] = row[2]
+                if isfloat(row[i + 3]):
+                    if i != 4:
+                        returnData['num'] = round(float(row[i + 3]), 3)
+                    else:
+                        returnData['num'] = round(float(row[i + 3]) * 100, 3)
+                returnDatas['data'].append(returnData)
+            for row in ytd1_datas:
+                for rd in returnDatas['data']:
+                    if rd['name'] != row[2]:
+                        continue
+                    if isfloat(row[i + 3]):
+                        if i != 4:
+                            rd['ytd'] = round(float(row[i + 3]), 3)
+                        else:
+                            rd['ytd'] = round(float(row[i + 3]) * 100, 3)
+        else:
             returnDatas['timeString'] = month_mark
-            returnData['target'] = returnData1['target'] = returnData2['target'] = returnData3['target'] = 50
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['业绩达成率'] = returnDatas
-        elif i == 6:
-            same_acc, ytd_acc = 0, 0
-            for same in month_task:
-                if isfloat(same.profit):
-                    same_acc = round(float(same.profit) * 100, 3)
-                if same.city == "上海":
-                    returnData['num'] = same_acc
-                elif same.city == "武汉":
-                    returnData1['num'] = same_acc
-                elif same.city == "成都":
-                    returnData2['num'] = same_acc
-                elif same.city == "西安":
-                    returnData3['num'] = same_acc
-            for ytd in ytd_task:
-                if isfloat(ytd.profit):
-                    ytd_acc = round(float(ytd.profit) * 100, 3)
-                if ytd.city == "上海":
-                    returnData['ytd'] = ytd_acc
-                elif ytd.city == "武汉":
-                    returnData1['ytd'] = ytd_acc
-                elif ytd.city == "成都":
-                    returnData2['ytd'] = ytd_acc
-                elif ytd.city == "西安":
-                    returnData3['ytd'] = ytd_acc
-            returnDatas['timeString'] = month_mark
-            returnData['target'] = returnData1['target'] = returnData2['target'] = returnData3['target'] = 30
-            returnDatas['data'].append(returnData)
-            returnDatas['data'].append(returnData1)
-            returnDatas['data'].append(returnData2)
-            returnDatas['data'].append(returnData3)
-            result['利润率'] = returnDatas
+            for row in month_datas:
+                returnData = {
+                    'noid': '',
+                    'name': '',
+                    'ytd': 0,
+                    'num': 0,
+                    'target': 0
+                }
+                returnData['name'] = row[2]
+                if isfloat(row[i + 3]):
+                    if i == 0:
+                        returnData['num'] = round(float(row[i + 3]), 3)
+                    else:
+                        returnData['num'] = round(float(row[i + 3]) * 100, 3)
+                returnDatas['data'].append(returnData)
+            #print(returnDatas)
+            for row in ytd1_datas:
+                for rd in returnDatas['data']:
+                    if rd['name'] != row[2]:
+                        continue
+                    if isfloat(row[i + 3]):
+                        if i == 0:
+                            rd['ytd'] = round(float(row[i + 3]), 3)
+                        else:
+                            rd['ytd'] = round(float(row[i + 3]) * 100, 3)
+        result[project2[i]] = returnDatas
     return result
 
 def kpi_merits(month):
@@ -680,28 +364,16 @@ def rank_show():
     center_kpi = CenterKPI()
     tasks = center_kpi.query.filter_by(week=week_mark).all()
     returnDatas = []
-    for res in tasks:
+    color = ["red", "orange", "Cyan", "blue", "green", "white", "gray", "purple", "pink", "brown", "black", "pansy"]
+    week_datas = []
+    for ele in tasks:
+        week_datas.append([getattr(ele, c.key) for c in class_mapper(ele.__class__).columns])
+    for i, row in enumerate(week_datas):
         returnData = {
-            'city': '',
-            'color': '',
-            'score': ''
+            'city': row[2],
+            'color': color[i % len(color)],
+            'score': row[10]
         }
-        if res.city == "上海":
-            returnData['city'] = "上海"
-            returnData['color'] = "red"
-            returnData['score'] = res.score
-        elif res.city == "武汉":
-            returnData['city'] = "武汉"
-            returnData['color'] = "orange"
-            returnData['score'] = res.score
-        elif res.city == "成都":
-            returnData['city'] = "成都"
-            returnData['color'] = "Cyan"
-            returnData['score'] = res.score
-        elif res.city == "西安":
-            returnData['city'] = "西安"
-            returnData['color'] = "blue"
-            returnData['score'] = res.score
         returnDatas.append(returnData)
     return [returnDatas]
 def TransportKPI_to_DB(input_file):
